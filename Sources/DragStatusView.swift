@@ -2,6 +2,8 @@ import Cocoa
 
 class DropTargetView: NSView {
     weak var button: NSStatusBarButton?
+    private var hoverTimer: Timer?
+    private var hasFiredAirDrop = false
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -30,10 +32,18 @@ class DropTargetView: NSView {
             return []
         }
         button?.highlight(true)
+        hasFiredAirDrop = false
+
+        let pasteboard = sender.draggingPasteboard
+        hoverTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
+            self?.triggerAirDrop(from: pasteboard)
+        }
+
         return .copy
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
+        cancelTimer()
         button?.highlight(false)
     }
 
@@ -42,7 +52,10 @@ class DropTargetView: NSView {
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        cancelTimer()
         button?.highlight(false)
+
+        if hasFiredAirDrop { return true }
 
         guard let urls = sender.draggingPasteboard.readObjects(
             forClasses: [NSURL.self],
@@ -51,6 +64,26 @@ class DropTargetView: NSView {
             return false
         }
 
+        return sendViaAirDrop(urls: urls)
+    }
+
+    // MARK: - AirDrop
+
+    private func triggerAirDrop(from pasteboard: NSPasteboard) {
+        guard let urls = pasteboard.readObjects(
+            forClasses: [NSURL.self],
+            options: [.urlReadingFileURLsOnly: true]
+        ) as? [URL], !urls.isEmpty else {
+            return
+        }
+
+        hasFiredAirDrop = true
+        button?.highlight(false)
+        sendViaAirDrop(urls: urls)
+    }
+
+    @discardableResult
+    private func sendViaAirDrop(urls: [URL]) -> Bool {
         guard let airdrop = NSSharingService(named: .sendViaAirDrop) else {
             showAlert(
                 title: "AirDrop Unavailable",
@@ -69,6 +102,11 @@ class DropTargetView: NSView {
 
         airdrop.perform(withItems: urls)
         return true
+    }
+
+    private func cancelTimer() {
+        hoverTimer?.invalidate()
+        hoverTimer = nil
     }
 
     private func showAlert(title: String, message: String) {

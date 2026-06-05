@@ -15,6 +15,8 @@ $(BUNDLE): $(SOURCES) Resources/Info.plist Resources/AppIcon.icns
 	cp Resources/AppIcon.icns "$(BUNDLE)/Contents/Resources/AppIcon.icns"
 	cp Resources/AirDropIcon.png "$(BUNDLE)/Contents/Resources/AirDropIcon.png"
 	cp Resources/AirDropIcon@2x.png "$(BUNDLE)/Contents/Resources/AirDropIcon@2x.png"
+	cp Resources/DragBadge.png "$(BUNDLE)/Contents/Resources/DragBadge.png"
+	cp Resources/DragBadge@2x.png "$(BUNDLE)/Contents/Resources/DragBadge@2x.png"
 	codesign --sign - --force --deep "$(BUNDLE)"
 	@echo "Built: $(BUNDLE)"
 

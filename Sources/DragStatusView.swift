@@ -4,6 +4,7 @@ class DropTargetView: NSView {
     weak var button: NSStatusBarButton?
     private var hoverTimer: Timer?
     private var hasFiredAirDrop = false
+    private var normalImage: NSImage?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -31,7 +32,10 @@ class DropTargetView: NSView {
         ) else {
             return []
         }
-        button?.highlight(true)
+        normalImage = button?.image
+        let badge = Bundle.main.image(forResource: "DragBadge")
+        badge?.isTemplate = false
+        button?.image = badge
         hasFiredAirDrop = false
 
         let pasteboard = sender.draggingPasteboard
@@ -39,12 +43,12 @@ class DropTargetView: NSView {
             self?.triggerAirDrop(from: pasteboard)
         }
 
-        return .copy
+        return .generic
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
         cancelTimer()
-        button?.highlight(false)
+        restoreIcon()
     }
 
     override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
@@ -53,7 +57,7 @@ class DropTargetView: NSView {
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         cancelTimer()
-        button?.highlight(false)
+        restoreIcon()
 
         if hasFiredAirDrop { return true }
 
@@ -78,7 +82,7 @@ class DropTargetView: NSView {
         }
 
         hasFiredAirDrop = true
-        button?.highlight(false)
+        restoreIcon()
         sendViaAirDrop(urls: urls)
     }
 
@@ -102,6 +106,12 @@ class DropTargetView: NSView {
 
         airdrop.perform(withItems: urls)
         return true
+    }
+
+    private func restoreIcon() {
+        if let img = normalImage {
+            button?.image = img
+        }
     }
 
     private func cancelTimer() {

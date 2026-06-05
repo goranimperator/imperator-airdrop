@@ -94,27 +94,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     @objc private func openAirDrop() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = true
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.prompt = "AirDrop"
-        panel.message = "Select files to send via AirDrop"
-
-        NSApp.activate(ignoringOtherApps: true)
-
-        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
-
-        guard let airdrop = NSSharingService(named: .sendViaAirDrop),
-              airdrop.canPerform(withItems: panel.urls) else {
-            let alert = NSAlert()
-            alert.messageText = "AirDrop Unavailable"
-            alert.informativeText = "Make sure Bluetooth and Wi-Fi are enabled."
-            alert.alertStyle = .warning
-            alert.runModal()
-            return
-        }
-
-        airdrop.perform(withItems: panel.urls)
+        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app"))
     }
 }

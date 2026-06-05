@@ -24,6 +24,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "About Imperator AirDrop", action: #selector(showAbout), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Open AirDrop", action: #selector(openAirDrop), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
@@ -90,5 +91,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     @objc private func closeAbout() {
         aboutWindow?.close()
+    }
+
+    @objc private func openAirDrop() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.prompt = "AirDrop"
+        panel.message = "Select files to send via AirDrop"
+
+        NSApp.activate(ignoringOtherApps: true)
+
+        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
+
+        guard let airdrop = NSSharingService(named: .sendViaAirDrop),
+              airdrop.canPerform(withItems: panel.urls) else {
+            let alert = NSAlert()
+            alert.messageText = "AirDrop Unavailable"
+            alert.informativeText = "Make sure Bluetooth and Wi-Fi are enabled."
+            alert.alertStyle = .warning
+            alert.runModal()
+            return
+        }
+
+        airdrop.perform(withItems: panel.urls)
     }
 }

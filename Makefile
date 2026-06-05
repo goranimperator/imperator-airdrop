@@ -1,4 +1,4 @@
-APP_NAME = Imperator Airdrop
+APP_NAME = Imperator AirDrop
 BUNDLE = build/$(APP_NAME).app
 BINARY = $(BUNDLE)/Contents/MacOS/ImperatorAirdrop
 SOURCES = $(wildcard Sources/*.swift)

@@ -23,7 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         button.addSubview(dropTarget)
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "About Imperator Airdrop", action: #selector(showAbout), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "About Imperator AirDrop", action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
@@ -57,7 +57,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         iconView.imageScaling = .scaleProportionallyUpOrDown
         contentView.addSubview(iconView)
 
-        let title = NSTextField(labelWithString: "Imperator Airdrop")
+        let title = NSTextField(labelWithString: "Imperator AirDrop")
         title.font = .boldSystemFont(ofSize: 16)
         title.alignment = .center
         title.frame = NSRect(x: 20, y: height - 140, width: width - 40, height: 24)

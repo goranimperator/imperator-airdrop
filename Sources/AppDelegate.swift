@@ -13,7 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let bundle = Bundle.main
         let image = bundle.image(forResource: "AirDropIcon")
         image?.isTemplate = true
-        image?.size = NSSize(width: image!.size.width * 0.9, height: image!.size.height * 0.9)
+        image?.size = NSSize(width: image!.size.width * 0.81, height: image!.size.height * 0.81)
         button.image = image
         button.toolTip = "Drop a file here to send via AirDrop"
 

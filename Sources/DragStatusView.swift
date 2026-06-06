@@ -2,9 +2,12 @@ import Cocoa
 
 class DropTargetView: NSView {
     weak var button: NSStatusBarButton?
+    weak var statusItem: NSStatusItem?
+    var clickMenu: NSMenu?
     private var hoverTimer: Timer?
     private var hasFiredAirDrop = false
     private var badgeWindow: NSWindow?
+    private var clickTimer: Timer?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -16,11 +19,26 @@ class DropTargetView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
-        superview?.mouseDown(with: event)
+        if event.clickCount == 2 {
+            clickTimer?.invalidate()
+            clickTimer = nil
+            NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app"))
+        } else {
+            clickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
+                self?.showMenu()
+            }
+        }
     }
 
     override func rightMouseDown(with event: NSEvent) {
-        superview?.rightMouseDown(with: event)
+        showMenu()
+    }
+
+    private func showMenu() {
+        guard let menu = clickMenu, let statusItem = statusItem else { return }
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
     }
 
     // MARK: - Badge Window

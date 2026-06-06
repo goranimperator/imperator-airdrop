@@ -17,17 +17,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         button.image = image
         button.toolTip = "Drop a file here to send via AirDrop"
 
-        let dropTarget = DropTargetView(frame: button.bounds)
-        dropTarget.autoresizingMask = [.width, .height]
-        dropTarget.button = button
-        button.addSubview(dropTarget)
-
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "About Imperator AirDrop", action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Open AirDrop", action: #selector(openAirDrop), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        statusItem.menu = menu
+
+        let dropTarget = DropTargetView(frame: button.bounds)
+        dropTarget.autoresizingMask = [.width, .height]
+        dropTarget.button = button
+        dropTarget.statusItem = statusItem
+        dropTarget.clickMenu = menu
+        button.addSubview(dropTarget)
     }
 
     @objc private func showAbout() {

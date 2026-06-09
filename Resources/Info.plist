@@ -7,7 +7,9 @@
     <key>CFBundleExecutable</key>
     <string>ImperatorAirdrop</string>
     <key>CFBundleIdentifier</key>
-    <string>com.imperator.airdrop</string>
+    <string>com.goranimperator.ImperatorAirDrop</string>
+    <key>CFBundleDisplayName</key>
+    <string>Imperator AirDrop</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleIconFile</key>
@@ -26,5 +28,7 @@
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 1986 Goran Imperator. All rights reserved.</string>
 </dict>
 </plist>

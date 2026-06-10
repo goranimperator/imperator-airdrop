@@ -10,7 +10,7 @@ all: $(BUNDLE)
 $(BUNDLE): $(SOURCES) Resources/Info.plist Resources/AppIcon.icns
 	@mkdir -p "$(BUNDLE)/Contents/MacOS"
 	@mkdir -p "$(BUNDLE)/Contents/Resources"
-	swiftc $(SOURCES) -o "$(BINARY)" -framework Cocoa -framework SwiftUI
+	swiftc $(SOURCES) -o "$(BINARY)" -framework Cocoa -framework SwiftUI -framework ServiceManagement
 	cp Resources/Info.plist "$(BUNDLE)/Contents/Info.plist"
 	cp Resources/AppIcon.icns "$(BUNDLE)/Contents/Resources/AppIcon.icns"
 	cp Resources/AirDropIcon.png "$(BUNDLE)/Contents/Resources/AirDropIcon.png"

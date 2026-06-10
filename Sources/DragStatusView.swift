@@ -3,7 +3,8 @@ import Cocoa
 class DropTargetView: NSView {
     weak var button: NSStatusBarButton?
     weak var statusItem: NSStatusItem?
-    var clickMenu: NSMenu?
+    var onTogglePopover: (() -> Void)?
+    var onClosePopover: (() -> Void)?
     private var hoverTimer: Timer?
     private var hasFiredAirDrop = false
     private var badgeWindow: NSWindow?
@@ -35,10 +36,7 @@ class DropTargetView: NSView {
     }
 
     private func showMenu() {
-        guard let menu = clickMenu, let statusItem = statusItem else { return }
-        statusItem.menu = menu
-        statusItem.button?.performClick(nil)
-        statusItem.menu = nil
+        onTogglePopover?()
     }
 
     // MARK: - Badge Window
@@ -93,6 +91,7 @@ class DropTargetView: NSView {
             return []
         }
 
+        onClosePopover?()
         button?.highlight(true)
         showBadge(near: sender)
         hasFiredAirDrop = false

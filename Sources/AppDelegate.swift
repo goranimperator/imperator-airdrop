@@ -1,8 +1,31 @@
 import Cocoa
+import SwiftUI
+import ServiceManagement
+
+enum AppColors {
+    static let brand = Color(red: 0xa0/255.0, green: 0x18/255.0, blue: 0x18/255.0)
+    static let brandFaded = brand.opacity(0.25)
+    static let accent = Color(red: 0.43, green: 0.05, blue: 0.05)
+    static let brandNS = NSColor(red: 0xa0/255.0, green: 0x18/255.0, blue: 0x18/255.0, alpha: 1.0)
+}
+
+extension View {
+    func cursor(_ cursor: NSCursor) -> some View {
+        onHover { inside in
+            if inside { cursor.push() } else { NSCursor.pop() }
+        }
+    }
+
+    func expandTapTarget() -> some View {
+        contentShape(Rectangle())
+    }
+}
 
 class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var statusItem: NSStatusItem!
+    private var popover: NSPopover!
     private var aboutWindow: NSWindow?
+    private var eventMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -10,28 +33,64 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         UserDefaults.standard.set(0, forKey: "AppleAccentColor")
         ProcessInfo.processInfo.setValue("Imperator AirDrop", forKey: "processName")
 
+        setupPopover()
+        setupStatusItem()
+        setupEventMonitor()
+    }
+
+    private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         guard let button = statusItem.button else { return }
-        let bundle = Bundle.main
-        let image = bundle.image(forResource: "AirDropIcon")
+        let image = Bundle.main.image(forResource: "AirDropIcon")
         image?.isTemplate = true
         image?.size = NSSize(width: 14, height: 14)
         button.image = image
         button.toolTip = "Drop a file here to send via AirDrop"
 
-        let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "About Imperator AirDrop", action: #selector(showAbout), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Open AirDrop", action: #selector(openAirDrop), keyEquivalent: ""))
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-
         let dropTarget = DropTargetView(frame: button.bounds)
         dropTarget.autoresizingMask = [.width, .height]
         dropTarget.button = button
         dropTarget.statusItem = statusItem
-        dropTarget.clickMenu = menu
+        dropTarget.onTogglePopover = { [weak self] in self?.togglePopover() }
+        dropTarget.onClosePopover = { [weak self] in self?.closePopover() }
         button.addSubview(dropTarget)
+    }
+
+    private func setupPopover() {
+        popover = NSPopover()
+        popover.behavior = .transient
+        popover.animates = true
+
+        let contentView = PopoverContentView(
+            openAirDropAction: { [weak self] in self?.openAirDrop() },
+            aboutAction: { [weak self] in self?.showAbout() },
+            quitAction: { NSApp.terminate(nil) }
+        )
+        let hostingController = NSHostingController(rootView: contentView)
+        hostingController.preferredContentSize = NSSize(width: 340, height: 86)
+        popover.contentSize = hostingController.preferredContentSize
+        popover.contentViewController = hostingController
+    }
+
+    private func setupEventMonitor() {
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            self?.closePopover()
+        }
+    }
+
+    @objc private func togglePopover() {
+        if popover.isShown {
+            closePopover()
+        } else {
+            guard let button = statusItem.button else { return }
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
+        }
+    }
+
+    private func closePopover() {
+        popover.performClose(nil)
     }
 
     @objc private func showAbout() {
@@ -90,7 +149,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         websiteButton.bezelStyle = .inline
         websiteButton.isBordered = false
         websiteButton.font = .systemFont(ofSize: 11)
-        websiteButton.contentTintColor = NSColor(red: 0xa0/255.0, green: 0x18/255.0, blue: 0x18/255.0, alpha: 1)
+        websiteButton.contentTintColor = AppColors.brandNS
         websiteButton.alignment = .center
         websiteButton.target = self
         websiteButton.action = #selector(openWebsite)
@@ -108,7 +167,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         button.font = .systemFont(ofSize: 14, weight: .medium)
         button.isBordered = false
         button.wantsLayer = true
-        button.layer?.backgroundColor = NSColor(red: 0xa0/255.0, green: 0x18/255.0, blue: 0x18/255.0, alpha: 1).cgColor
+        button.layer?.backgroundColor = AppColors.brandNS.cgColor
         button.layer?.cornerRadius = 8
         button.contentTintColor = .white
         button.target = self
@@ -131,5 +190,90 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     @objc private func openAirDrop() {
         NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app"))
+    }
+}
+
+struct PopoverContentView: View {
+    let openAirDropAction: () -> Void
+    let aboutAction: () -> Void
+    let quitAction: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Imperator AirDrop")
+                    .font(.headline)
+                Spacer()
+                HoverButton(action: openAirDropAction) {
+                    Text("Open AirDrop")
+                        .font(.caption)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            HStack {
+                LaunchAtLoginToggle()
+                Spacer()
+                HoverButton(action: aboutAction) {
+                    Text("About")
+                        .font(.caption)
+                }
+                HoverButton(action: quitAction) {
+                    Text("Quit")
+                        .font(.caption)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+        .frame(width: 340)
+        .background(.black.opacity(0.15))
+    }
+}
+
+struct LaunchAtLoginToggle: View {
+    @State private var isEnabled = SMAppService.mainApp.status == .enabled
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("Open at Login")
+                .font(.caption)
+            Toggle("", isOn: $isEnabled)
+                .toggleStyle(.switch)
+                .scaleEffect(0.55)
+                .frame(width: 36, height: 20)
+                .tint(AppColors.brand)
+                .labelsHidden()
+                .onChange(of: isEnabled) { _, newValue in
+                    do {
+                        if newValue { try SMAppService.mainApp.register() }
+                        else { try SMAppService.mainApp.unregister() }
+                    } catch {
+                        isEnabled = SMAppService.mainApp.status == .enabled
+                    }
+                }
+        }
+        .opacity(isHovered ? 1.0 : 0.45)
+        .animation(.easeInOut(duration: 0.2), value: isHovered)
+        .onHover { isHovered = $0 }
+    }
+}
+
+struct HoverButton<Label: View>: View {
+    let action: () -> Void
+    @ViewBuilder let label: () -> Label
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) { label() }
+            .buttonStyle(.plain)
+            .foregroundStyle(.primary)
+            .opacity(isHovered ? 1.0 : 0.45)
+            .animation(.easeInOut(duration: 0.2), value: isHovered)
+            .onHover { isHovered = $0 }
     }
 }

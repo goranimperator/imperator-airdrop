@@ -201,6 +201,13 @@ struct PopoverContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
+                if let icon = Bundle.main.image(forResource: "AirDropIcon") {
+                    Image(nsImage: icon)
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 14, height: 14)
+                        .foregroundStyle(.white)
+                }
                 Text("Imperator AirDrop")
                     .font(.headline)
                 Spacer()

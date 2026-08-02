@@ -2,6 +2,12 @@ APP_NAME = Imperator AirDrop
 BUNDLE = build/$(APP_NAME).app
 BINARY = $(BUNDLE)/Contents/MacOS/ImperatorAirdrop
 SOURCES = $(wildcard Sources/*.swift)
+# Without an explicit -target, swiftc stamps the build machine's OS as the
+# minimum, so the binary refuses to launch on anything older. Keep this in sync
+# with LSMinimumSystemVersion in Info.plist. 14 is the real floor: SwiftUI's
+# onChange(of:initial:_:) does not exist on 13.
+MIN_MACOS = 14
+TARGET = $(shell uname -m)-apple-macos$(MIN_MACOS)
 DIST = dist
 ZIP = $(DIST)/Imperator-AirDrop-$(VERSION).zip
 BUILD_NUMBER = $(shell git rev-list --count HEAD)
@@ -13,7 +19,7 @@ all: $(BUNDLE)
 $(BUNDLE): $(SOURCES) Resources/Info.plist Resources/AppIcon.icns
 	@mkdir -p "$(BUNDLE)/Contents/MacOS"
 	@mkdir -p "$(BUNDLE)/Contents/Resources"
-	swiftc $(SOURCES) -o "$(BINARY)" -framework Cocoa -framework SwiftUI -framework ServiceManagement
+	swiftc $(SOURCES) -target $(TARGET) -o "$(BINARY)" -framework Cocoa -framework SwiftUI -framework ServiceManagement
 	cp Resources/Info.plist "$(BUNDLE)/Contents/Info.plist"
 	cp Resources/AppIcon.icns "$(BUNDLE)/Contents/Resources/AppIcon.icns"
 	cp Resources/AirDropIcon.png "$(BUNDLE)/Contents/Resources/AirDropIcon.png"

@@ -21,7 +21,12 @@ app and choose **Open**, or clear the quarantine flag:
 xattr -dr com.apple.quarantine "/Applications/Imperator AirDrop.app"
 ```
 
-Requires macOS 13 or later.
+Requires macOS 14 or later, Apple silicon. Built and tested on macOS 26 only --
+older versions are expected to work but have not been verified.
+
+Install at your own risk. The app is not notarized and carries no Apple
+Developer signature, so macOS cannot vouch for it. It is provided as is, with no
+warranty, under the [MIT license](LICENSE).
 
 ## Use
 

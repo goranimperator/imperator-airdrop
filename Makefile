@@ -47,7 +47,7 @@ dist: check-version clean all
 	ditto -c -k --sequesterRsrc --keepParent "$(BUNDLE)" "$(ZIP)"
 	@echo "Packaged: $(ZIP)"
 
-# Bump version, commit, tag, push, publish GitLab release with the zip attached.
+# Bump version, commit, tag, push, publish GitHub release with the zip attached.
 release: check-version
 	@git diff --quiet && git diff --cached --quiet || { echo "Working tree dirty -- commit first."; exit 1; }
 	/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(VERSION)" Resources/Info.plist

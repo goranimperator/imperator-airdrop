@@ -55,7 +55,7 @@ Follows the Imperator Apps BrandBook (`gitlab.com/goranimperator/imperator-mac-a
 - Dark mode forced: `NSApp.appearance = NSAppearance(named: .darkAqua)`
 - Accent override: `UserDefaults.standard.set(0, forKey: "AppleAccentColor")`
 - Bundle ID: `com.goranimperator.ImperatorAirDrop`
-- All UI text in English
+- All UI text in English, and so are release notes, tag messages, and everything else user-facing
 - Ad-hoc codesigning required (`codesign --sign - --force --deep`)
 
 ## Resources

@@ -1,7 +1,13 @@
-# Imperator AirDrop
+<p align="center">
+  <img src="Resources/AppIcon.png" width="128" height="128" alt="Imperator AirDrop app icon">
+</p>
 
-A macOS menu bar app that turns AirDrop into a drop target. Drag a file onto the
-menu bar icon and it goes straight to the AirDrop share sheet.
+<h1 align="center">Imperator AirDrop</h1>
+
+<p align="center">
+  A macOS menu bar app that turns AirDrop into a drop target. Drag a file onto
+  the menu bar icon and it goes straight to the AirDrop share sheet.
+</p>
 
 ## Install
 

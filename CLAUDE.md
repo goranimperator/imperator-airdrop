@@ -58,8 +58,12 @@ otool -l "build/Imperator AirDrop.app/Contents/MacOS/ImperatorAirdrop" | awk '/L
 Expect `minos 14.0` and `sdk 27.0`. If `sdk` equals `minos`, the linker flags did
 not take and every control in the app is the old generation.
 
-Measured on macOS 27: the switch is 54x24pt at 1:1, so `scaleEffect(0.55)` gives
-30x13pt. `controlSize` no longer changes it.
+Measured on macOS 27: a SwiftUI `Toggle` in `.switch` style reports a fitting
+size of 54x24pt, and `controlSize` no longer changes it. That is the view's
+fitting size, not what macOS draws: the system switch in System Settings is
+36x16pt. Both are 2.25:1, so `scaleEffect(0.55)` keeps the system's proportions
+and lands at 30x13pt, deliberately smaller than the system control. Do not
+rescale to match System Settings pixel for pixel.
 
 ## Architecture
 

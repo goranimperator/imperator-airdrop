@@ -65,6 +65,23 @@ fitting size, not what macOS draws: the system switch in System Settings is
 and lands at 30x13pt, deliberately smaller than the system control. Do not
 rescale to match System Settings pixel for pixel.
 
+## Popover background and corner radius
+
+Both are the system's to draw. The content paints nothing behind itself.
+
+The brandbook still lists `.black.opacity(0.15)` as the popover background, but on
+macOS 27 NSPopover already draws the system material. Painting that overlay on top
+stacks a second background and darkens this popover away from every other popover
+on the system. `imperator-free-games` reached the same conclusion first and carries
+the same comment; treat the brandbook line as stale rather than authoritative.
+
+The corner radius is not settable. Measured here at 19.5pt and at 19.75pt in
+`imperator-widget-clock`, independently. Setting `cornerRadius` on the private
+`NSPopoverFrame` layer does nothing: sweeping 0, 8, 16, 20, 22, 24 and 26 all
+produced the same silhouette, because the apparent change came from forcing
+`wantsLayer = true`, not from the radius. The brandbook's 18pt applies only to
+window shapes an app draws itself, and this app draws none.
+
 ## Architecture
 
 macOS menu bar utility app. Hybrid SwiftUI + AppKit:

@@ -237,7 +237,13 @@ struct PopoverContentView: View {
             .padding(.vertical, 10)
         }
         .frame(width: 340)
-        .background(.black.opacity(0.15))
+        // Nothing painted behind the content on purpose. NSPopover already draws
+        // the system's own background material and clips it to the shape macOS 27
+        // wants, measured at 19.5pt here and 19.75pt in imperator-widget-clock. A
+        // `.background(.black.opacity(0.15))` stacked a second background on top of
+        // that one and darkened this popover away from every other popover on the
+        // system. Same reasoning as imperator-free-games. Both the material and the
+        // corner radius are the system's to draw.
     }
 }
 

@@ -8,6 +8,15 @@ SOURCES = $(wildcard Sources/*.swift)
 # onChange(of:initial:_:) does not exist on 13.
 MIN_MACOS = 14
 TARGET = $(shell uname -m)-apple-macos$(MIN_MACOS)
+
+# AppKit picks which generation of controls to draw from the sdk field in
+# LC_BUILD_VERSION, not from the macOS it is running on. -target sets both minos
+# and sdk to MIN_MACOS, which would draw macOS 14 era controls forever. These
+# linker flags stamp the real SDK while leaving the minimum alone, so the app
+# keeps running on macOS 14 and still draws current controls on macOS 27.
+SDK_VERSION = $(shell xcrun --sdk macosx --show-sdk-version)
+PLATFORM_VERSION = -Xlinker -platform_version -Xlinker macos \
+	-Xlinker $(MIN_MACOS).0 -Xlinker $(SDK_VERSION)
 DIST = dist
 ZIP = $(DIST)/Imperator-AirDrop-$(VERSION).zip
 BUILD_NUMBER = $(shell git rev-list --count HEAD)
@@ -19,7 +28,7 @@ all: $(BUNDLE)
 $(BUNDLE): $(SOURCES) Resources/Info.plist Resources/AppIcon.icns
 	@mkdir -p "$(BUNDLE)/Contents/MacOS"
 	@mkdir -p "$(BUNDLE)/Contents/Resources"
-	swiftc $(SOURCES) -target $(TARGET) -o "$(BINARY)" -framework Cocoa -framework SwiftUI -framework ServiceManagement
+	swiftc $(SOURCES) -target $(TARGET) $(PLATFORM_VERSION) -o "$(BINARY)" -framework Cocoa -framework SwiftUI -framework ServiceManagement
 	cp Resources/Info.plist "$(BUNDLE)/Contents/Info.plist"
 	cp Resources/AppIcon.icns "$(BUNDLE)/Contents/Resources/AppIcon.icns"
 	cp Resources/AirDropIcon.png "$(BUNDLE)/Contents/Resources/AirDropIcon.png"

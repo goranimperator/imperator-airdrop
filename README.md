@@ -21,7 +21,7 @@ app and choose **Open**, or clear the quarantine flag:
 xattr -dr com.apple.quarantine "/Applications/Imperator AirDrop.app"
 ```
 
-Requires macOS 14 or later, Apple silicon. Built and tested on macOS 26 only --
+Requires macOS 14 or later, Apple silicon. Built and tested on macOS 27 only --
 older versions are expected to work but have not been verified.
 
 Install at your own risk. The app is not notarized and carries no Apple
@@ -70,7 +70,7 @@ make dist VERSION=1.0.0
 ```
 
 Cut a full release -- bumps `Info.plist`, commits, tags `v1.0.0`, pushes, and
-publishes a GitLab release with the zip attached:
+publishes a GitHub release with the zip attached:
 
 ```bash
 make release VERSION=1.0.0
@@ -79,6 +79,20 @@ make release VERSION=1.0.0
 Requires the [GitHub CLI](https://cli.github.com) (`brew install gh`, then
 `gh auth login`). The working tree must be clean. Tags are plain semver
 (`v1.0.0`); the release title carries the app name.
+
+### Deployment target
+
+`MIN_MACOS` in the Makefile sets the oldest macOS the app runs on. It is separate
+from the SDK the app is built against, which the `PLATFORM_VERSION` linker flags
+stamp from whatever Xcode is installed. AppKit reads that SDK stamp to decide
+which generation of controls to draw, so the app keeps a macOS 14 minimum while
+still drawing current controls on macOS 27.
+
+Check both after a build:
+
+```bash
+otool -l "build/Imperator AirDrop.app/Contents/MacOS/ImperatorAirdrop" | awk '/LC_BUILD_VERSION/,/^$/' | grep -E "minos|sdk"
+```
 
 ## Layout
 

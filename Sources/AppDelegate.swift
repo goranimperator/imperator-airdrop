@@ -23,9 +23,8 @@ extension View {
 
 class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
-    private var aboutWindow: NSWindow?
-    private var eventMonitor: Any?
+    private var panel: MenuBarPanel!
+    private var aboutPanel: NSPanel?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -58,135 +57,54 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     private func setupPopover() {
-        popover = NSPopover()
-        popover.behavior = .transient
-        popover.animates = true
-
         let contentView = PopoverContentView(
             openAirDropAction: { [weak self] in self?.openAirDrop() },
             aboutAction: { [weak self] in self?.showAbout() },
             quitAction: { NSApp.terminate(nil) }
         )
-        let hostingController = NSHostingController(rootView: contentView)
-        hostingController.preferredContentSize = NSSize(width: 340, height: 86)
-        popover.contentSize = hostingController.preferredContentSize
-        popover.contentViewController = hostingController
+        // A MenuBarPanel rather than an NSPopover. macOS 27 draws its own menu
+        // bar panels as plain rounded rectangles: a 17.50 pt corner, no arrow
+        // and no animation, measured off Control Centre's Wi-Fi panel. An
+        // NSPopover draws none of that and exposes none of it for adjustment.
+        panel = MenuBarPanel(content: contentView, width: 340)
+        panel.contentHeight = { 86 }
     }
 
     private func setupEventMonitor() {
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            self?.closePopover()
-        }
+        // The click-outside dismissal lives in MenuBarPanel, which owns the
+        // same monitor plus the exception for the status item's own click.
     }
 
     @objc private func togglePopover() {
-        if popover.isShown {
+        if panel.isShown {
             closePopover()
         } else {
             guard let button = statusItem.button else { return }
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
+            panel.show(from: button)
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKey()
         }
     }
 
     private func closePopover() {
-        popover.performClose(nil)
+        panel.close()
     }
 
     @objc private func showAbout() {
-        if let existing = aboutWindow, existing.isVisible {
-            existing.makeKeyAndOrderFront(nil)
+        if let existing = aboutPanel, existing.isVisible {
             NSApp.activate(ignoringOtherApps: true)
+            existing.makeKeyAndOrderFront(nil)
             return
         }
-
-        let width: CGFloat = 300
-        let height: CGFloat = 320
-        let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
-            styleMask: [.titled, .closable, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.isMovableByWindowBackground = true
-        window.center()
-        window.isReleasedWhenClosed = false
-
-        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
-
-        let iconView = NSImageView(frame: NSRect(x: (width - 64) / 2, y: height - 100, width: 64, height: 64))
-        iconView.image = NSApp.applicationIconImage
-        iconView.imageScaling = .scaleProportionallyUpOrDown
-        contentView.addSubview(iconView)
-
-        let title = NSTextField(labelWithString: "Imperator AirDrop")
-        title.font = .boldSystemFont(ofSize: 16)
-        title.alignment = .center
-        title.frame = NSRect(x: 20, y: height - 140, width: width - 40, height: 24)
-        contentView.addSubview(title)
-
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
-        let versionLabel = NSTextField(labelWithString: "Version \(version) (\(build))")
-        versionLabel.font = .systemFont(ofSize: 11)
-        versionLabel.textColor = .secondaryLabelColor
-        versionLabel.alignment = .center
-        versionLabel.frame = NSRect(x: 20, y: height - 160, width: width - 40, height: 16)
-        contentView.addSubview(versionLabel)
-
-        let year = Calendar.current.component(.year, from: Date())
-        let copyrightLabel = NSTextField(labelWithString: "\u{00A9} 1986-\(year) Goran Imperator")
-        copyrightLabel.font = .systemFont(ofSize: 11)
-        copyrightLabel.textColor = .tertiaryLabelColor
-        copyrightLabel.alignment = .center
-        copyrightLabel.frame = NSRect(x: 20, y: height - 180, width: width - 40, height: 16)
-        contentView.addSubview(copyrightLabel)
-
-        let websiteButton = NSButton(frame: NSRect(x: 20, y: height - 202, width: width - 40, height: 18))
-        websiteButton.title = "goranimperator.com"
-        websiteButton.bezelStyle = .inline
-        websiteButton.isBordered = false
-        websiteButton.font = .systemFont(ofSize: 11)
-        websiteButton.contentTintColor = AppColors.brandNS
-        websiteButton.alignment = .center
-        websiteButton.target = self
-        websiteButton.action = #selector(openWebsite)
-        contentView.addSubview(websiteButton)
-
-        let desc = NSTextField(wrappingLabelWithString: "Drop a file on the menu bar icon to send via AirDrop.")
-        desc.font = .systemFont(ofSize: 13)
-        desc.alignment = .center
-        desc.frame = NSRect(x: 30, y: height - 250, width: width - 60, height: 40)
-        contentView.addSubview(desc)
-
-        let button = NSButton(frame: NSRect(x: 30, y: 20, width: width - 60, height: 36))
-        button.title = "OK"
-        button.bezelStyle = .rounded
-        button.font = .systemFont(ofSize: 14, weight: .medium)
-        button.isBordered = false
-        button.wantsLayer = true
-        button.layer?.backgroundColor = AppColors.brandNS.cgColor
-        button.layer?.cornerRadius = 8
-        button.contentTintColor = .white
-        button.target = self
-        button.action = #selector(closeAbout)
-        contentView.addSubview(button)
-
-        window.contentView = contentView
-        window.makeKeyAndOrderFront(nil)
+        let created = AboutPanel.make()
+        created.center()
+        // Ordering front is not enough from an LSUIElement app: without the
+        // activation the panel is created behind whatever the user was in.
         NSApp.activate(ignoringOtherApps: true)
-        aboutWindow = window
+        created.makeKeyAndOrderFront(nil)
+        aboutPanel = created
     }
 
-    @objc private func closeAbout() {
-        aboutWindow?.close()
-    }
-
-    @objc private func openWebsite() {
-        NSWorkspace.shared.open(URL(string: "https://www.goranimperator.com")!)
-    }
 
     @objc private func openAirDrop() {
         NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app"))
@@ -237,13 +155,13 @@ struct PopoverContentView: View {
             .padding(.vertical, 10)
         }
         .frame(width: 340)
-        // Nothing painted behind the content on purpose. NSPopover already draws
-        // the system's own background material and clips it to the shape macOS 27
-        // wants, measured at 19.5pt here and 19.75pt in imperator-widget-clock. A
-        // `.background(.black.opacity(0.15))` stacked a second background on top of
-        // that one and darkened this popover away from every other popover on the
-        // system. Same reasoning as imperator-free-games. Both the material and the
-        // corner radius are the system's to draw.
+        // Brandbook 6.1: the tint over the panel's material, which is what
+        // every Imperator menu bar app paints. This was left bare while the app
+        // used an NSPopover, because that control paints its own chrome and a
+        // second fill on top read as a panel inside a panel. MenuBarPanel puts
+        // the system's `.popover` material down and nothing else, so the tint
+        // belongs here again.
+        .background(Color.black.opacity(0.15))
     }
 }
 
@@ -287,5 +205,124 @@ struct HoverButton<Label: View>: View {
             .opacity(isHovered ? 1.0 : 0.45)
             .animation(.easeInOut(duration: 0.2), value: isHovered)
             .onHover { isHovered = $0 }
+    }
+}
+
+/// Brandbook 10: a standalone panel, not a sheet and not a second popover.
+///
+/// Ported from imperator-widget-clock, which worked out both traps this app used
+/// to fall into: a panel that vanishes on the first outside click, and an icon
+/// that silently resolves to nothing.
+enum AboutPanel {
+    /// Brandbook 10.2: 300 x 260. The panel grows if the content needs more, and
+    /// never carries an explicit height on the view: a frame is a proposal that
+    /// children are free to overflow, and the window would size itself to the
+    /// overflow instead.
+    static let width: CGFloat = 300
+    static let specifiedHeight: CGFloat = 260
+
+    static func make() -> NSPanel {
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: width, height: specifiedHeight),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        panel.titlebarAppearsTransparent = true
+        panel.titleVisibility = .hidden
+        panel.isMovableByWindowBackground = true
+        panel.isReleasedWhenClosed = false
+        // An NSPanel hides itself when its app deactivates, and this app is an
+        // LSUIElement that goes inactive the moment anything else is clicked.
+        // Left at the default the panel disappears behind the first click
+        // outside it.
+        panel.hidesOnDeactivate = false
+        panel.appearance = NSAppearance(named: .darkAqua)
+        panel.contentViewController = NSHostingController(rootView: AboutView())
+        // Setting contentViewController resizes the window to the hosted view's
+        // fitting size, and a SwiftUI view that has not laid out yet reports
+        // zero. Without this the panel comes up 0x0 and the contentRect above is
+        // thrown away.
+        if let hosted = panel.contentViewController?.view {
+            hosted.layoutSubtreeIfNeeded()
+            panel.setContentSize(NSSize(width: width,
+                                        height: max(specifiedHeight, hosted.fittingSize.height)))
+        } else {
+            panel.setContentSize(NSSize(width: width, height: specifiedHeight))
+        }
+        return panel
+    }
+
+}
+
+/// Brandbook 10.3, in its order: icon, name, version, copyright, website.
+struct AboutView: View {
+    @State private var isLinkHovered = false
+
+    /// Both read from the bundle, so the panel cannot claim a version the build
+    /// does not carry.
+    static func versionText(from bundle: Bundle = .main) -> String {
+        let short = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+        return "Version \(short) (Build \(build))"
+    }
+
+    /// Brandbook 10.4: the end year is stamped at launch, because a plist cannot
+    /// hold a value that moves.
+    static func copyrightText(year: Int = Calendar.current.component(.year, from: Date())) -> String {
+        "\u{00A9} 1986-\(year) Goran Imperator"
+    }
+
+    static let websiteURL = URL(string: "https://www.goranimperator.com")!
+
+    /// Loaded by name rather than through `NSApp.applicationIconImage`, which
+    /// returns an empty image in an LSUIElement app. An empty image in SwiftUI
+    /// is not a 64pt blank: the view takes no space at all, so the panel lays
+    /// out short with no icon and no gap where one should be.
+    static var iconImage: NSImage {
+        if let named = NSImage(named: "AppIcon") { return named }
+        if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let fromFile = NSImage(contentsOf: url) {
+            return fromFile
+        }
+        return NSApp.applicationIconImage ?? NSImage()
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(nsImage: AboutView.iconImage)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 64, height: 64)
+
+            Text("Imperator AirDrop")
+                .font(.headline)
+
+            Text(AboutView.versionText())
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(AboutView.copyrightText())
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+
+            // A Button rather than a Text with a tap gesture: a tap gesture is
+            // reachable by the mouse alone, and this is the one link in the app.
+            Button {
+                NSWorkspace.shared.open(AboutView.websiteURL)
+            } label: {
+                Text("goranimperator.com")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.brand)
+                    .underline(isLinkHovered)
+            }
+            .buttonStyle(.plain)
+            .onHover { isLinkHovered = $0 }
+            .cursor(.pointingHand)
+            .help("Open goranimperator.com")
+        }
+        .padding(24)
+        .frame(width: AboutPanel.width)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

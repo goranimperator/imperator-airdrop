@@ -20,6 +20,11 @@ PLATFORM_VERSION = -Xlinker -platform_version -Xlinker macos \
 DIST = dist
 ZIP = $(DIST)/Imperator-AirDrop-$(VERSION).zip
 BUILD_NUMBER = $(shell git rev-list --count HEAD)
+# `release` commits before it tags, but every variable here expands first, so the
+# tagged build needs the count plus that commit. Without the +1 the shipped bundle
+# claims to be one build older than it is: v1.0.2 is commit 26 and went out as 25.
+# `dist` commits nothing, so the plain count is correct there.
+RELEASE_BUILD_NUMBER = $(shell echo $$(( $(shell git rev-list --count HEAD) + 1 )))
 
 .PHONY: all clean run install dist release check-version
 
@@ -66,8 +71,8 @@ dist: check-version clean all
 release: check-version
 	@git diff --quiet && git diff --cached --quiet || { echo "Working tree dirty -- commit first."; exit 1; }
 	/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(VERSION)" Resources/Info.plist
-	/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(BUILD_NUMBER)" Resources/Info.plist
-	$(MAKE) dist VERSION=$(VERSION)
+	/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(RELEASE_BUILD_NUMBER)" Resources/Info.plist
+	$(MAKE) dist VERSION=$(VERSION) BUILD_NUMBER=$(RELEASE_BUILD_NUMBER)
 	git add Resources/Info.plist
 	git commit -m "Release v$(VERSION)"
 	git tag -a v$(VERSION) -m "$(APP_NAME) $(VERSION)"

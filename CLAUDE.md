@@ -65,22 +65,41 @@ fitting size, not what macOS draws: the system switch in System Settings is
 and lands at 30x13pt, deliberately smaller than the system control. Do not
 rescale to match System Settings pixel for pixel.
 
-## Popover background and corner radius
+## Menu bar panel
 
-Both are the system's to draw. The content paints nothing behind itself.
+The menu bar surface is `MenuBarPanel`, an `NSPanel` the app draws itself, not an
+`NSPopover`. The measurements and the reasoning live in `Sources/MenuBarPanel.swift`;
+do not restate them from memory here, read them there.
 
-The brandbook still lists `.black.opacity(0.15)` as the popover background, but on
-macOS 27 NSPopover already draws the system material. Painting that overlay on top
-stacks a second background and darkens this popover away from every other popover
-on the system. `imperator-free-games` reached the same conclusion first and carries
-the same comment; treat the brandbook line as stale rather than authoritative.
+The short version, all of it measured rather than assumed:
 
-The corner radius is not settable. Measured here at 19.5pt and at 19.75pt in
-`imperator-widget-clock`, independently. Setting `cornerRadius` on the private
-`NSPopoverFrame` layer does nothing: sweeping 0, 8, 16, 20, 22, 24 and 26 all
-produced the same silhouette, because the apparent change came from forcing
-`wantsLayer = true`, not from the radius. The brandbook's 18pt applies only to
-window shapes an app draws itself, and this app draws none.
+- `MenuBarPanel.cornerRadius = 18.25` is the value set, not the value drawn.
+  `NSVisualEffectView` blends its edge and draws roughly 0.75pt tighter than the
+  radius it is given, so 18.25 draws 17.50pt. Setting 17.5 drew 16.75.
+- 17.50pt is what macOS 27 draws around Control Centre's Wi-Fi panel. A plain
+  titled window is 17.25, so a menu bar panel is a window corner, not a popover one.
+- The corner is `.circular`, not `.continuous`.
+- `NSPopover` is not an option: it draws 26.25pt from a binary stamped `sdk 27.0`
+  and 9.5pt from one stamped `sdk 14.0`, and exposes no radius to set.
+- No arrow and no open or close animation. macOS 27's own menu bar panels have
+  neither.
+
+`MenuBarPanel` owns its own outside-click monitor, its Escape monitor and the
+exception that leaves the status item's own click to the button. The app no longer
+installs any of those itself.
+
+The SwiftUI content paints brandbook 6.1's `.black.opacity(0.15)` over the panel's
+`.popover` material. That tint was correctly absent while the app used an
+`NSPopover`, which paints its own chrome, and belongs back now that the panel puts
+down bare material and nothing else.
+
+Verify the corner on the real window, never on a render:
+
+```bash
+screencapture -x -o -l <window id> /tmp/panel.png
+```
+
+Fit a circle to the bottom corner. It should land on 35.0 device pixels, 17.50pt.
 
 ## Architecture
 
@@ -89,12 +108,13 @@ macOS menu bar utility app. Hybrid SwiftUI + AppKit:
 - **SwiftUI** -- app lifecycle only (`@main` entry point with `@NSApplicationDelegateAdaptor`)
 - **AppKit** -- everything else (status bar, drag-and-drop, windows)
 
-Three source files in `Sources/`:
+Four source files in `Sources/`:
 
 | File | Role |
 |------|------|
 | `ImperatorAirdropApp.swift` | SwiftUI entry point, delegates to AppDelegate |
-| `AppDelegate.swift` | Status bar setup, popover, About panel, dark mode/accent color |
+| `AppDelegate.swift` | Status bar setup, menu bar panel, About panel, dark mode/accent color |
+| `MenuBarPanel.swift` | The menu bar surface: an NSPanel the app draws, with its own dismissal monitors |
 | `DragStatusView.swift` | NSView subclass overlaid on status bar button -- handles drag-and-drop, click detection, AirDrop triggering |
 
 Key pattern: `DropTargetView` is added as a transparent subview on `NSStatusBarButton` because status bar buttons don't natively support drag-and-drop. This subview intercepts all mouse and drag events.
@@ -103,11 +123,14 @@ Key pattern: `DropTargetView` is added as a transparent subview on `NSStatusBarB
 
 Click detection is manual (no `statusItem.menu` set, because that blocks double-click detection). `DropTargetView` calls back into `AppDelegate` via `onTogglePopover` / `onClosePopover`:
 
-- **Single click** -- 0.5s timer, then toggles the `NSPopover`
+- **Single click** -- 0.5s timer, then toggles the `MenuBarPanel`
 - **Double click** -- cancels timer, opens Finder AirDrop
-- **Right click** -- toggles the popover immediately
+- **Right click** -- toggles the panel immediately
 
-The popover hosts `PopoverContentView` (SwiftUI) in an `NSHostingController`. A global event monitor on `.leftMouseDown` / `.rightMouseDown` closes it on outside clicks.
+The panel hosts `PopoverContentView` (SwiftUI) in an `NSHostingView`. Dismissal is
+the panel's own: `MenuBarPanel` installs the outside-click and Escape monitors and
+leaves a click on the status item to the button's action, so the toggle does not
+race its own dismissal.
 
 ## AirDrop
 

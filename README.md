@@ -36,7 +36,8 @@ Everything happens on the AirDrop icon in the menu bar.
 Quit. It waits half a second before appearing, because the app has to know you
 are not on your way to a double click. That pause is deliberate, not a hang.
 
-**Double click** skips the panel and opens the AirDrop window in Finder.
+**Double click** (two clicks within half a second) skips the panel and opens the
+AirDrop window in Finder.
 
 **Drag files onto the icon** to send them. Hold the drag still over the icon and
 after one second AirDrop fires on its own -- a red badge follows the cursor while

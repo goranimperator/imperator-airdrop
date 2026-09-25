@@ -124,13 +124,23 @@ Key pattern: `DropTargetView` is added as a transparent subview on `NSStatusBarB
 Click detection is manual (no `statusItem.menu` set, because that blocks double-click detection). `DropTargetView` calls back into `AppDelegate` via `onTogglePopover` / `onClosePopover`:
 
 - **Single click** -- 0.5s timer, then toggles the `MenuBarPanel`
-- **Double click** -- cancels timer, opens Finder AirDrop
+- **Double click** -- second click within 0.5s of the first cancels the timer and opens Finder AirDrop
 - **Right click** -- toggles the panel immediately
 
 The panel hosts `PopoverContentView` (SwiftUI) in an `NSHostingView`. Dismissal is
 the panel's own: `MenuBarPanel` installs the outside-click and Escape monitors and
 leaves a click on the status item to the button's action, so the toggle does not
 race its own dismissal.
+
+Double click is detected by comparing `event.timestamp` of consecutive clicks
+against the app's own 0.5s window, never from `event.clickCount`. On macOS 27 the
+status item receives both clicks of a double click with a `clickCount` of 1, so a
+`clickCount == 2` check never matches and double click silently turns into two
+single clicks. The window is deliberately not `NSEvent.doubleClickInterval`: that
+is a user setting (1.8s on the author's machine) and a single click has to wait
+out the whole window before the panel may open. The pending timer is also
+invalidated before a new one is scheduled, or two clicks too slow to pair up
+schedule two timers and toggle the panel open and straight back shut.
 
 ## AirDrop
 

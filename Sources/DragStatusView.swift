@@ -19,16 +19,41 @@ class DropTargetView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // The app's own double-click window. Deliberately not
+    // NSEvent.doubleClickInterval: that is a user setting (1.8s on the
+    // author's machine), and a single click has to wait out the whole window
+    // before the panel may open.
+    private static let doubleClickWindow: TimeInterval = 0.5
+    private var lastClickTime: TimeInterval?
+
     override func mouseDown(with event: NSEvent) {
-        if event.clickCount == 2 {
+        // Double click is detected from the timestamps, never from
+        // event.clickCount. On macOS 27 a status item receives every click with
+        // a clickCount of 1, so a check for 2 never matches and double click
+        // silently degrades into two single clicks.
+        if let last = lastClickTime,
+           event.timestamp - last <= Self.doubleClickWindow {
+            lastClickTime = nil
             clickTimer?.invalidate()
             clickTimer = nil
-            NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app"))
-        } else {
-            clickTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
-                self?.showMenu()
-            }
+            openAirDropInFinder()
+            return
         }
+
+        lastClickTime = event.timestamp
+        // Cancel any pending timer first. Assigning over the property drops the
+        // old timer without invalidating it, so two slow clicks used to fire
+        // two timers and toggle the panel open and straight back shut.
+        clickTimer?.invalidate()
+        clickTimer = Timer.scheduledTimer(withTimeInterval: Self.doubleClickWindow,
+                                          repeats: false) { [weak self] _ in
+            self?.showMenu()
+        }
+    }
+
+    private func openAirDropInFinder() {
+        onClosePopover?()
+        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app/Contents/Applications/AirDrop.app"))
     }
 
     override func rightMouseDown(with event: NSEvent) {

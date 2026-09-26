@@ -14,12 +14,16 @@
 Download the latest zip from [Releases](https://github.com/goranimperator/imperator-airdrop/releases),
 unzip, and move `Imperator AirDrop.app` to `/Applications`.
 
-The app is ad-hoc signed, so Gatekeeper blocks the first launch. Right-click the
-app and choose **Open**, or clear the quarantine flag:
+The app is ad-hoc signed, with no Apple Developer ID, so Gatekeeper blocks the
+first launch. After moving it to `/Applications`, clear the quarantine flag once:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/Imperator AirDrop.app"
 ```
+
+Or try to open it once, then allow it in **System Settings > Privacy & Security >
+Open Anyway**. Right-click and **Open** no longer gets past Gatekeeper on macOS 15
+and later.
 
 Requires macOS 14 or later, Apple silicon. Built and tested on macOS 27 only --
 older versions are expected to work but have not been verified.

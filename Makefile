@@ -80,6 +80,6 @@ release: check-version
 	git push origin v$(VERSION)
 	gh release create v$(VERSION) \
 		--title "$(APP_NAME) $(VERSION)" \
-		--notes "Menu bar AirDrop utility for macOS. Ad-hoc signed, so Gatekeeper blocks the first launch: right-click the app and choose Open, or run \`xattr -dr com.apple.quarantine \"/Applications/$(APP_NAME).app\"\`." \
+		--notes "Menu bar AirDrop utility for macOS. Ad-hoc signed with no Apple Developer ID, so Gatekeeper blocks the first launch. After moving the app to /Applications, clear the quarantine flag once: \`xattr -dr com.apple.quarantine \"/Applications/$(APP_NAME).app\"\`." \
 		"$(ZIP)#$(APP_NAME) $(VERSION) (macOS)"
 	@echo "Released v$(VERSION)"

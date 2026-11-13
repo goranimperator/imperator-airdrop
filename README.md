@@ -15,7 +15,7 @@ Download the latest zip from [Releases](https://github.com/goranimperator/impera
 unzip, and move `Imperator AirDrop.app` to `/Applications`.
 
 The app is ad-hoc signed, with no Apple Developer ID, so Gatekeeper blocks the
-first launch. After moving it to `/Applications`, clear the quarantine flag once:
+first launch. After moving it to `/Applications`, clear the quarantine flag:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/Imperator AirDrop.app"
@@ -36,8 +36,8 @@ warranty, under the [MIT license](LICENSE).
 
 Everything happens on the AirDrop icon in the menu bar.
 
-**Single click** opens the panel -- Open AirDrop, Open at Login, About, and
-Quit. It waits half a second before appearing, because the app has to know you
+**Single click** opens the panel -- Open AirDrop, Check for Updates, Open at
+Login, About, and Quit. It waits half a second before appearing, because the app has to know you
 are not on your way to a double click. That pause is deliberate, not a hang.
 
 **Double click** (two clicks within half a second) skips the panel and opens the
@@ -49,6 +49,36 @@ that timer runs. Drop the files instead of waiting and the share sheet opens
 immediately.
 
 **Right click** opens the same panel as a single click, with no delay.
+
+**Updates.** Once a day the app asks GitHub whether a newer release is out. If
+one is, the panel shows it in a row above the switches, with a **Download**
+button that opens the release page, and macOS shows one notification for that
+version. **Check Now** asks straight away. Updating is still by hand: download
+the zip, replace the app in `/Applications`, and clear the quarantine flag
+again, because a downloaded update meets Gatekeeper exactly like the first
+install:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Imperator AirDrop.app"
+```
+
+Type the command rather than copying it from a chat window. A copied line can
+come out with curly quotes or a non-breaking space, and `xattr` then answers
+"No such file".
+
+## Network and permissions
+
+**Network.** One request a day, for the update check: a `GET` to
+`api.github.com/repos/goranimperator/imperator-airdrop/releases/latest`. It
+sends nothing but the app's name and version as the User-Agent GitHub requires.
+No telemetry, no analytics, nothing about you. Turn it off with the **Check for
+Updates** switch in the panel; **Check Now** still works with it off, because
+that is a request you make yourself. AirDrop itself goes through macOS, not
+through the app.
+
+**Notifications.** Asked for the first time there is an update to report, never
+at first launch. Deny it and nothing breaks: the update still shows in the
+panel.
 
 ## Build from source
 
@@ -107,6 +137,7 @@ otool -l "build/Imperator AirDrop.app/Contents/MacOS/ImperatorAirdrop" | awk '/L
 | `Sources/AppDelegate.swift` | Status bar, menu bar panel, About panel |
 | `Sources/MenuBarPanel.swift` | The menu bar panel the app draws itself |
 | `Sources/DragStatusView.swift` | Drag-and-drop and click handling |
+| `Sources/UpdateChecker.swift` | The daily update check and its notification |
 | `Resources/` | Icons and `Info.plist` |
 
 Hybrid SwiftUI + AppKit: SwiftUI owns the app lifecycle and the panel's content,

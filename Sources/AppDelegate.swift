@@ -9,6 +9,12 @@ enum AppColors {
     static let brandNS = NSColor(red: 0xa0/255.0, green: 0x18/255.0, blue: 0x18/255.0, alpha: 1.0)
 }
 
+enum AppLayout {
+    /// Both switch labels in the panel share one width, so the two switches
+    /// stand in a column instead of each sitting after its own label.
+    static let switchLabelWidth: CGFloat = 100
+}
+
 extension View {
     func expandTapTarget() -> some View {
         contentShape(Rectangle())
@@ -29,6 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         setupPopover()
         setupStatusItem()
         setupEventMonitor()
+        UpdateChecker.shared.start()
     }
 
     private func setupStatusItem() {
@@ -54,14 +61,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let contentView = PopoverContentView(
             openAirDropAction: { [weak self] in self?.openAirDrop() },
             aboutAction: { [weak self] in self?.showAbout() },
-            quitAction: { NSApp.terminate(nil) }
+            quitAction: { NSApp.terminate(nil) },
+            layoutChanged: { [weak self] in self?.refitPanel() }
         )
         // A MenuBarPanel rather than an NSPopover. macOS 27 draws its own menu
         // bar panels as plain rounded rectangles: a 17.50 pt corner, no arrow
         // and no animation, measured off Control Centre's Wi-Fi panel. An
         // NSPopover draws none of that and exposes none of it for adjustment.
+        // No fixed contentHeight: the update row comes and goes, so the
+        // panel opens at the content's fitting size.
         panel = MenuBarPanel(content: contentView, width: 340)
-        panel.contentHeight = { 86 }
+    }
+
+    /// Resizes an open panel when its content changes height, which happens
+    /// when Check Now finds a release while the panel is up. The top edge stays
+    /// under the menu bar and the panel grows downward. `show(from:)` is not
+    /// called again for this: it would install a second set of monitors.
+    private func refitPanel() {
+        // One run loop later, so SwiftUI has laid out the new rows first.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.panel.isShown, let content = self.panel.contentView else { return }
+            content.layoutSubtreeIfNeeded()
+            let height = content.fittingSize.height
+            guard height > 0, abs(height - content.frame.height) > 0.5 else { return }
+            let top = self.panel.frame.maxY
+            self.panel.setContentSize(NSSize(width: self.panel.frame.width, height: height))
+            self.panel.setFrameTopLeftPoint(NSPoint(x: self.panel.frame.minX, y: top))
+        }
     }
 
     private func setupEventMonitor() {
@@ -109,6 +135,7 @@ struct PopoverContentView: View {
     let openAirDropAction: () -> Void
     let aboutAction: () -> Void
     let quitAction: () -> Void
+    let layoutChanged: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -133,6 +160,48 @@ struct PopoverContentView: View {
 
             Divider()
 
+            // Sits above the footer so it reads as news about the app rather
+            // than as one more thing to operate.
+            if let update = UpdateChecker.shared.available {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(AppColors.brand)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Version \(update.version) is out")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("You have \(UpdateChecker.currentVersion)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    HoverButton(action: { UpdateChecker.open(update.page) }) {
+                        Text("Download").font(.caption)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+
+                Divider()
+            }
+
+            // The app has no settings window, so the update switch and Check
+            // Now live here, styled like Open at Login below them.
+            HStack(spacing: 8) {
+                UpdatesToggle()
+                Spacer()
+                Text(updateStatus)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                HoverButton(action: { Task { await UpdateChecker.shared.check() } }) {
+                    Text("Check Now").font(.caption)
+                }
+                .disabled(UpdateChecker.shared.status == .checking)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+
             HStack {
                 LaunchAtLoginToggle()
                 Spacer()
@@ -156,6 +225,46 @@ struct PopoverContentView: View {
         // the system's `.popover` material down and nothing else, so the tint
         // belongs here again.
         .background(Color.black.opacity(0.15))
+        .onChange(of: UpdateChecker.shared.status) { _, _ in layoutChanged() }
+    }
+
+    /// Kept short: it shares a 340pt row with the switch and Check Now. The
+    /// version itself is in About.
+    private var updateStatus: String {
+        switch UpdateChecker.shared.status {
+        case .idle: return ""
+        case .checking: return "Checking\u{2026}"
+        case .upToDate: return "Up to date"
+        case .failed: return "Could not reach GitHub"
+        // The row above already says it, with room for the whole sentence.
+        case .available: return ""
+        }
+    }
+}
+
+/// The daily update check's switch, built like `LaunchAtLoginToggle`. Turning it
+/// back on checks straight away if a day has passed.
+struct UpdatesToggle: View {
+    @AppStorage(UpdateChecker.enabledKey) private var checkForUpdates = true
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("Check for Updates")
+                .font(.caption)
+                .frame(width: AppLayout.switchLabelWidth, alignment: .leading)
+            Toggle("", isOn: $checkForUpdates)
+                .toggleStyle(.switch)
+                .scaleEffect(0.55)
+                .tint(AppColors.brand)
+                .labelsHidden()
+                .onChange(of: checkForUpdates) { _, on in
+                    if on { UpdateChecker.shared.checkIfDue() }
+                }
+        }
+        .opacity(isHovered ? 1.0 : 0.45)
+        .animation(.easeInOut(duration: 0.2), value: isHovered)
+        .onHover { isHovered = $0 }
     }
 }
 
@@ -167,6 +276,7 @@ struct LaunchAtLoginToggle: View {
         HStack(spacing: 6) {
             Text("Open at Login")
                 .font(.caption)
+                .frame(width: AppLayout.switchLabelWidth, alignment: .leading)
             Toggle("", isOn: $isEnabled)
                 .toggleStyle(.switch)
                 .scaleEffect(0.55)

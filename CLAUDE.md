@@ -108,7 +108,7 @@ macOS menu bar utility app. Hybrid SwiftUI + AppKit:
 - **SwiftUI** -- app lifecycle only (`@main` entry point with `@NSApplicationDelegateAdaptor`)
 - **AppKit** -- everything else (status bar, drag-and-drop, windows)
 
-Four source files in `Sources/`:
+Five source files in `Sources/`:
 
 | File | Role |
 |------|------|
@@ -116,6 +116,7 @@ Four source files in `Sources/`:
 | `AppDelegate.swift` | Status bar setup, menu bar panel, About panel, dark mode/accent color |
 | `MenuBarPanel.swift` | The menu bar surface: an NSPanel the app draws, with its own dismissal monitors |
 | `DragStatusView.swift` | NSView subclass overlaid on status bar button -- handles drag-and-drop, click detection, AirDrop triggering |
+| `UpdateChecker.swift` | Daily check of GitHub's latest release, the update row's state, one notification per version |
 
 Key pattern: `DropTargetView` is added as a transparent subview on `NSStatusBarButton` because status bar buttons don't natively support drag-and-drop. This subview intercepts all mouse and drag events.
 
@@ -141,6 +142,42 @@ is a user setting (1.8s on the author's machine) and a single click has to wait
 out the whole window before the panel may open. The pending timer is also
 invalidated before a new one is scheduled, or two clicks too slow to pair up
 schedule two timers and toggle the panel open and straight back shut.
+
+## Update checker
+
+`UpdateChecker.swift` is the shared Imperator update checker, taken from the
+DockFolders implementation with only the three per-app constants changed. It is
+the app's only network traffic, and it is there on purpose: do not remove it as
+network code nobody asked for, and do not widen what it sends.
+
+- One `GET` a day to `api.github.com/repos/goranimperator/imperator-airdrop/releases/latest`,
+  with the app's name and version as the User-Agent and nothing else.
+- An hourly timer checks once 24 hours have passed since the last *successful*
+  check (`lastUpdateCheck`), so a failure retries within the hour.
+- On by default. The **Check for Updates** switch in the panel stores
+  `checkForUpdates`; **Check Now** runs even with it off.
+- The notification permission is asked only when there is an update to report,
+  and `notifiedUpdateVersion` keeps it to one notification per version.
+- Links open only for `https://github.com`, because the URL comes from a
+  network response. Versions compare numerically per component.
+- The repo must stay public: `releases/latest` answers 404 to an
+  unauthenticated request for a private repo.
+- Overwriting a release (moving its tag) briefly makes `releases/latest` point
+  at the previous release or answer 404, and the checker counts that as a
+  failed check. Users already on that version number are never told about the
+  overwrite, so ship user-facing fixes as a new version.
+
+The panel shows a row above the switches when a newer release is out, and the
+panel's height follows its content: `AppDelegate.refitPanel()` resizes an open
+panel in place, top edge fixed, rather than calling `show(from:)` again, which
+would install a second set of monitors.
+
+Verify end to end against the real release: stamp an older
+`CFBundleShortVersionString` into the installed copy, re-sign ad-hoc, delete
+`lastUpdateCheck` and `notifiedUpdateVersion`, launch, and expect
+`defaults read com.goranimperator.ImperatorAirDrop lastUpdateCheck` to print a
+timestamp and the panel to show the published version. `make install` puts the
+real build back.
 
 ## AirDrop
 

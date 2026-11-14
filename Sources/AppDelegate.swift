@@ -9,12 +9,6 @@ enum AppColors {
     static let brandNS = NSColor(red: 0xa0/255.0, green: 0x18/255.0, blue: 0x18/255.0, alpha: 1.0)
 }
 
-enum AppLayout {
-    /// Both switch labels in the panel share one width, so the two switches
-    /// stand in a column instead of each sitting after its own label.
-    static let switchLabelWidth: CGFloat = 100
-}
-
 extension View {
     func expandTapTarget() -> some View {
         contentShape(Rectangle())
@@ -258,7 +252,6 @@ struct UpdatesToggle: View {
         HStack(spacing: 6) {
             Text("Check for Updates")
                 .font(.caption)
-                .frame(width: AppLayout.switchLabelWidth, alignment: .leading)
             Toggle("", isOn: $checkForUpdates)
                 .toggleStyle(.switch)
                 .scaleEffect(0.55)
@@ -282,7 +275,6 @@ struct LaunchAtLoginToggle: View {
         HStack(spacing: 6) {
             Text("Open at Login")
                 .font(.caption)
-                .frame(width: AppLayout.switchLabelWidth, alignment: .leading)
             Toggle("", isOn: $isEnabled)
                 .toggleStyle(.switch)
                 .scaleEffect(0.55)

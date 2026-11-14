@@ -160,8 +160,11 @@ struct PopoverContentView: View {
 
             Divider()
 
-            // Sits above the footer so it reads as news about the app rather
-            // than as one more thing to operate.
+            // The body: the update row when there is one, then the update
+            // switch at the bottom of it. Both sit above the footer, which
+            // holds only Open at Login, About and Quit.
+            // The update row reads as news about the app rather than as one
+            // more thing to operate.
             if let update = UpdateChecker.shared.available {
                 HStack(spacing: 10) {
                     Image(systemName: "arrow.down.circle.fill")
@@ -186,7 +189,7 @@ struct PopoverContentView: View {
             }
 
             // The app has no settings window, so the update switch and Check
-            // Now live here, styled like Open at Login below them.
+            // Now live here, styled like Open at Login in the footer.
             HStack(spacing: 8) {
                 UpdatesToggle()
                 Spacer()
@@ -200,8 +203,11 @@ struct PopoverContentView: View {
                 .disabled(UpdateChecker.shared.status == .checking)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 10)
+            .padding(.vertical, 10)
 
+            Divider()
+
+            // FOOTER: Open at Login on the left, actions on the right.
             HStack {
                 LaunchAtLoginToggle()
                 Spacer()

@@ -184,20 +184,22 @@ struct PopoverContentView: View {
 
             // The app has no settings window, so the update switch and Check
             // Now live here, styled like Open at Login in the footer.
-            HStack(spacing: 8) {
+            VStack(spacing: 8) {
                 UpdatesToggle()
-                Spacer()
-                Text(updateStatus)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                HoverButton(action: { Task { await UpdateChecker.shared.check() } }) {
-                    Text("Check Now").font(.caption)
+                HStack {
+                    Text(updateStatus)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Spacer()
+                    HoverButton(action: { Task { await UpdateChecker.shared.check() } }) {
+                        Text("Check Now").font(.caption)
+                    }
+                    .disabled(UpdateChecker.shared.status == .checking)
                 }
-                .disabled(UpdateChecker.shared.status == .checking)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
 
             Divider()
 
@@ -232,38 +234,38 @@ struct PopoverContentView: View {
     /// version itself is in About.
     private var updateStatus: String {
         switch UpdateChecker.shared.status {
-        case .idle: return ""
+        case .idle: return "Version \(UpdateChecker.currentVersion)"
         case .checking: return "Checking\u{2026}"
-        case .upToDate: return "Up to date"
+        case .upToDate: return "Up to date, version \(UpdateChecker.currentVersion)"
         case .failed: return "Could not reach GitHub"
-        // The row above already says it, with room for the whole sentence.
-        case .available: return ""
+        case .available(let release): return "Version \(release.version) is available"
         }
     }
 }
 
-/// The daily update check's switch, built like `LaunchAtLoginToggle`. Turning it
-/// back on checks straight away if a day has passed.
+/// The daily update check's switch: the label on the left at full strength and
+/// the switch on the right edge. Turning it back on checks straight away if a
+/// day has passed.
 struct UpdatesToggle: View {
     @AppStorage(UpdateChecker.enabledKey) private var checkForUpdates = true
-    @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 6) {
-            Text("Check for Updates")
-                .font(.caption)
+        HStack {
+            Text("Check for updates")
+                .font(.system(size: 13))
+            Spacer()
             Toggle("", isOn: $checkForUpdates)
                 .toggleStyle(.switch)
                 .scaleEffect(0.55)
                 .tint(AppColors.brand)
                 .labelsHidden()
+                // scaleEffect shrinks the drawing but not the layout frame, so
+                // the switch sits 12pt in from the edge it is aligned to.
+                .padding(.trailing, -12)
                 .onChange(of: checkForUpdates) { _, on in
                     if on { UpdateChecker.shared.checkIfDue() }
                 }
         }
-        .opacity(isHovered ? 1.0 : 0.45)
-        .animation(.easeInOut(duration: 0.2), value: isHovered)
-        .onHover { isHovered = $0 }
     }
 }
 

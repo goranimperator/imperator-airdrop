@@ -154,7 +154,7 @@ network code nobody asked for, and do not widen what it sends.
   with the app's name and version as the User-Agent and nothing else.
 - An hourly timer checks once 24 hours have passed since the last *successful*
   check (`lastUpdateCheck`), so a failure retries within the hour.
-- On by default. The **Check for Updates** switch in the panel stores
+- On by default. The **Check for updates** switch in the panel stores
   `checkForUpdates`; **Check Now** runs even with it off.
 - The notification permission is asked only when there is an update to report,
   and `notifiedUpdateVersion` keeps it to one notification per version.

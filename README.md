@@ -36,7 +36,7 @@ warranty, under the [MIT license](LICENSE).
 
 Everything happens on the AirDrop icon in the menu bar.
 
-**Single click** opens the panel -- Open AirDrop, Check for Updates, Open at
+**Single click** opens the panel -- Open AirDrop, Check for updates, Open at
 Login, About, and Quit. It waits half a second before appearing, because the app has to know you
 are not on your way to a double click. That pause is deliberate, not a hang.
 
@@ -72,7 +72,7 @@ come out with curly quotes or a non-breaking space, and `xattr` then answers
 `api.github.com/repos/goranimperator/imperator-airdrop/releases/latest`. It
 sends nothing but the app's name and version as the User-Agent GitHub requires.
 No telemetry, no analytics, nothing about you. Turn it off with the **Check for
-Updates** switch in the panel; **Check Now** still works with it off, because
+updates** switch in the panel; **Check Now** still works with it off, because
 that is a request you make yourself. AirDrop itself goes through macOS, not
 through the app.
 
